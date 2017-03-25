@@ -1,0 +1,50 @@
+(require 'cl-lib)
+(defadvice save-buffers-kill-emacs (around no-query-kill-emacs activate)
+  "Prevent annoying \"Active processes exist\" query when you quit Emacs."
+  (cl-letf (((symbol-function #'process-list) (lambda ())))
+    ad-do-it))
+
+(defun update-tramp()
+  (cd "/tmp")
+  (shell-command "curl -O https://ftp.gnu.org/gnu/tramp/tramp-2.3.1.tar.gz")
+  (shell-command "tar xzf tramp*")
+  (shell-command "cd tramp-2.3.1 && ./configure && make")
+  (add-to-list 'load-path "/tmp/tramp-2.3.1/lisp/"))
+
+(defun install-projectile (branch)
+  (shell-command (format "git clone -b %s git://github.com/Silex/projectile /tmp/projectile" branch))
+  (load "/tmp/projectile/projectile.el")
+  (projectile-mode))
+
+;; (defun install-projectile-rails ()
+;;   (shell-command "git clone git://github.com/asok/projectile-rails /tmp/projectile-rails")
+;;   (load "/tmp/projectile-rails/projectile-rails.el")
+;;   (projectile-rails-global-mode))
+
+(defun install-projectile-rails ()
+  (package-initialize)
+  (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/"))
+  (package-refresh-contents)
+  (package-install 'projectile-rails)
+  (projectile-rails-global-mode t)
+  (projectile-rails-global-mode -1)
+  (projectile-rails-global-mode t))
+
+(defun test-gpg ()
+  (setq auth-sources '((:source "~/authinfo.gpg")))
+  (require 'epa-file)
+  (epa-file-enable)
+  (setq epg-gpg-program "gpg2")
+  (find-file "/sudo::/tmp/foo.txt")
+  (async-shell-command "ls"))
+
+(defun test-projectile (branch rails tramp)
+  (when tramp
+    (update-tramp))
+  (require 'tramp)
+  (install-projectile branch)
+  (when rails
+    (install-projectile-rails))
+  ;;(print (format "Emacs(%s) Projectile(%s) RAILS(%s) TRAMP(%s) WORKS(%s)\n" emacs-version branch rails tramp-version (test-scpx)) #'external-debugging-output)
+  ;;(message "Emacs(%s) Projectile(%s) RAILS(%s) TRAMP(%s) WORKS(%s)" emacs-version branch rails tramp-version (test-scpx))
+  (kill-emacs (test-gpg)))
